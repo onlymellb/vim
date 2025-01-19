@@ -47,36 +47,40 @@ dalias() { alias | grep 'docker' | sed "s/^\([^=]*\)=\(.*\)/\1 => \2/"| sed "s/[
 # Bash into running container
 dbash() { docker exec -it $(docker ps -aqf "name=$1") bash; }
 
-proxy(){
-  export https_proxy=http://127.0.0.1:41091
-  export http_proxy=http://127.0.0.1:41091
+location() {
+	curl https://ipinfo.io/$1\?token\=fc4cb16a9e44e0
 }
 
-unproxy(){
-  unset https_proxy
-  unset http_proxy 
+igo(){
+	set -o pipefail
+	local version=$1
+	local idir=/opt/homebrew/Cellar/go
+	local url=https://go.dev/dl/go${version}.darwin-`uname -m`.tar.gz
+	[[ -z ${version} ]] && echo "Please enter the golang version to install" && return 1
+	[[ -d ${idir}/${version} ]] && echo "This version ${version} of golang is already installed, skipping" && return 1
+	wget -O - ${url} | tar -zxvf - -C ${idir}
+	[[ $? -ne 0 ]] && echo "Can't found this golang version ${version}, please check" && return 1
+	mkdir ${idir}/${version}
+	mv ${idir}/go ${idir}/${version}/libexec
+	cp -r  ${idir}/${version}/libexec/bin  ${idir}/${version}
 }
 
-chgo(){
-	local godir="/Users/mac/local/go"
-	local gobin="/Users/mac/go/bin"
-	versions=`ls $godir|tr '\n' '|'|sed 's/.$//'`
-	[[ $# -eq 0 ]] && echo "chgo $versions" && return
-	if [[ -d $godir/$1 ]] 
-	then 
-		echo "start switching to golang version $1"
-		unlink $gobin/go
-		unlink $gobin/gofmt
-		unlink $gobin/goroot
-		ln -s $godir/$1/bin/go $gobin/go
-		ln -s $godir/$1/bin/gofmt $gobin/gofmt
-		ln -s $godir/$1/libexec $gobin/goroot
-		go version
-	else
-		echo "only support switching to these golang verison: $versions"
-	fi
+chgo() {
+	local version=$1
+	local sbin=/Users/Robin/local/go/bin
+	local goroot=${sbin}/goroot
+	local idir=/opt/homebrew/Cellar/go
+	versionList=`ls ${idir} | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'|tr '\n' '|'| sed 's/|$//'`
+	[[ -z ${version} ]] && echo "The enter version is empty. Please enter one version ${versionList} to switch" && return 1
+	[[ ! -d ${idir}/${version} ]] && echo "Not found this version ${version}. Please select a correct version ${versionList} to switch" && return 1
+	local ibin=${idir}/${version}/bin
+	local ilibexec=${idir}/${version}/libexec
+	[[ -L ${sbin}/go ]] && unlink ${sbin}/go
+	[[ -L ${sbin}/gofmt ]] && unlink ${sbin}/gofmt
+	[[ -L ${goroot} ]] && unlink ${goroot}
+	ln -s ${ibin}/go  ${sbin}/go
+	ln -s ${ibin}/gofmt  ${sbin}/gofmt
+	ln -s ${ilibexec} ${goroot}
+	go version
 }
-
-[ -f /usr/local/etc/profile.d/autojump.sh ] && . /usr/local/etc/profile.d/autojump.sh
- 
-alias confluence="ssh robin@3.28.217.36 -p 23867"
+___MY_VMOPTIONS_SHELL_FILE="${HOME}/.jetbrains.vmoptions.sh"; if [ -f "${___MY_VMOPTIONS_SHELL_FILE}" ]; then . "${___MY_VMOPTIONS_SHELL_FILE}"; fi
